@@ -26,7 +26,8 @@
         "psr/simple-cache": "^1|^2|^3"
     },
     "require": {
-        "php": ">=8.1"
+        "php": ">=8.1",
+        "ngsoft/tools": "^4"
     },
     "autoload": {
         "psr-4": {

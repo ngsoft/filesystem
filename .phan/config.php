@@ -21,8 +21,8 @@ return [
     'directory_list'                              => [
         'src',
         'vendor',
-        '../ngsoft-tools/lib/',
-        '../ngsoft-tools/src/',
+        // '../ngsoft-tools/lib/',
+        // '../ngsoft-tools/src/',
     ],
     // A directory list that defines files that will be excluded
     // from static analysis, but whose class and method
