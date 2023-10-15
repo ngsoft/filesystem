@@ -1,40 +1,43 @@
 {
-    "name": "ngsoft/filesystem",
-    "description": "Filesystem abstraction layer",
-    "keywords": [
-        "file",
-        "folder",
-        "directory",
-        "storage",
-        "filesystem",
-        "iterator",
-        "glob"
-    ],
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Aymeric Anger",
-            "role": "Developer",
-            "homepage": "https://github.com/ngsoft"
-        }
-    ],
-    "suggest": {},
-    "provide": {},
-    "require-dev": {
-        "fig/cache-util": "^2",
-        "psr/cache": "^1|^2|^3",
-        "psr/simple-cache": "^1|^2|^3"
+  "name": "ngsoft/filesystem",
+  "description": "Filesystem abstraction layer",
+  "keywords": [
+    "file",
+    "folder",
+    "directory",
+    "storage",
+    "filesystem",
+    "iterator",
+    "glob"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Aymeric Anger",
+      "role": "Developer",
+      "homepage": "https://github.com/ngsoft"
+    }
+  ],
+  "suggest": {},
+  "provide": {},
+  "require-dev": {
+    "fig/cache-util": "^2",
+    "psr/cache": "^1|^2|^3",
+    "psr/simple-cache": "^1|^2|^3"
+  },
+  "require": {
+    "php": ">=8.1",
+    "ngsoft/tools": "^4",
+    "ext-mbstring": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "NGSOFT\\": "src/"
     },
-    "require": {
-        "php": ">=8.1",
-        "ngsoft/tools": "^4"
-    },
-    "autoload": {
-        "psr-4": {
-            "NGSOFT\\": "src/"
-        },
-        "files": []
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    "files": [
+      "src/Filesystem/functions.php"
+    ]
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }

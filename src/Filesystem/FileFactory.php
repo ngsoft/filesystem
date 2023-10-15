@@ -6,9 +6,8 @@ namespace NGSOFT\Filesystem;
 
 class FileFactory
 {
-
     /**
-     * Get a File instance
+     * Get a File instance.
      */
     public function getFile(string $filename): File
     {
@@ -16,7 +15,7 @@ class FileFactory
     }
 
     /**
-     * Get a Directory instance
+     * Get a Directory instance.
      */
     public function getDirectory(string $dirname): Directory
     {
@@ -24,11 +23,10 @@ class FileFactory
     }
 
     /**
-     * Get File Contents
+     * Get File Contents.
      */
     public function getFileContents(string $filename): FileContents
     {
         return $this->getFile($filename)->getContents();
     }
-
 }

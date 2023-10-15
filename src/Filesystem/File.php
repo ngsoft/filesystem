@@ -4,41 +4,26 @@ declare(strict_types=1);
 
 namespace NGSOFT\Filesystem;
 
-use ErrorException,
-    InvalidArgumentException,
-    IteratorAggregate,
-    JsonException,
-    NGSOFT\Lock\FileSystemLock,
-    Stringable,
-    Throwable,
-    Traversable,
-    ValueError;
-use const DATE_DB,
-          SCRIPT_START;
-use function blank,
-             get_debug_type,
-             set_default_error_handler,
-             wait;
+use NGSOFT\Lock\FileSystemLock;
 
 /**
- * Manages a File
+ * Manages a File.
  */
-class File extends Filesystem implements IteratorAggregate
+class File extends Filesystem implements \IteratorAggregate
 {
-
-    protected ?string $hash = null;
+    protected ?string $hash         = null;
     protected ?FileSystemLock $lock = null;
-    protected array $tmpFiles = [];
-    protected ?string $tmpFile = null;
+    protected array $tmpFiles       = [];
+    protected ?string $tmpFile      = null;
 
     public function __construct(
-            string $path,
-    )
-    {
+        string $path,
+    ) {
         parent::__construct($path);
+
         if (is_dir($this->path))
         {
-            throw new InvalidArgumentException(sprintf('%s is a directory.', $path));
+            throw new \InvalidArgumentException(sprintf('%s is a directory.', $path));
         }
     }
 
@@ -50,10 +35,27 @@ class File extends Filesystem implements IteratorAggregate
         }
     }
 
+    public function __debugInfo(): array
+    {
+        $result = [
+            'path' => $this->path,
+        ];
+
+        if ($this->exists())
+        {
+            $result += [
+                'ctime' => date(\DATE_DB, $this->ctime()),
+                'mtime' => date(\DATE_DB, $this->mtime()),
+                'crc32' => $this->hash(),
+                //     'locked' => $this->lock()->isAcquired(),
+                //   'lock' => $this->lock(),
+            ];
+        }
+        return $result;
+    }
+
     /**
-     * Get file directory
-     *
-     * @return Directory
+     * Get file directory.
      */
     public function getDirectory(): Directory
     {
@@ -61,9 +63,7 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Checks if file exists and is regular file
-     *
-     * @return bool
+     * Checks if file exists and is regular file.
      */
     public function exists(): bool
     {
@@ -72,14 +72,11 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Check if crc checksum has changed
-     *
-     * @return bool
+     * Check if crc checksum has changed.
      */
     public function isModified(): bool
     {
-
-        $hash = $this->hash();
+        $hash    = $this->hash();
         $changed = $this->hash !== $hash;
 
         try
@@ -88,85 +85,73 @@ class File extends Filesystem implements IteratorAggregate
             if ($hash && ! $this->hash && $this->exists())
             {
                 // check if file modified before script started
-                return $this->mtime() < SCRIPT_START;
+                return $this->mtime() < \SCRIPT_START;
             }
 
             return $changed;
-        }
-        finally
+        } finally
         {
             $this->hash = $hash;
         }
     }
 
     /**
-     * Deletes the file
-     *
-     * @return bool
+     * Deletes the file.
      */
     public function unlink(): bool
     {
         try
         {
-            set_default_error_handler();
+            \set_default_error_handler();
             return ! $this->exists() || unlink($this->path);
-        }
-        catch (Throwable)
+        } catch (\Throwable)
         {
             return false;
-        }
-        finally
+        } finally
         {
             clearstatcache(false, $this->path);
         }
     }
 
-    /** {@inheritdoc} */
-    protected function doCopy(string|Filesystem $target, bool &$success = null): static
-    {
-        return $this->copy($target, $success);
-    }
-
     /**
-     * Copy File
+     * Copy File.
      *
-     * @param string|self $target new file
-     * @param ?bool $success True if the operation succeeded
+     * @param self|string $target  new file
+     * @param ?bool       $success True if the operation succeeded
+     *
      * @return static a File instance for the target
      */
     public function copy(string|self $target, bool &$success = null): static
     {
-
-        $dest = (string) $target;
-        $target = $target instanceof self ? $target : new static($dest);
+        $dest    = (string) $target;
+        $target  = $target instanceof self ? $target : new static($dest);
 
         $success = false;
 
         try
         {
-            set_default_error_handler();
+            \set_default_error_handler();
 
             if ($this->exists())
             {
                 static::createDir(dirname($dest));
+
                 // no need to copy if files are the same
                 if ($target->hash() !== $this->hash())
                 {
                     $success = copy($this->path, $dest);
+                } else
+                {
+                    $success = true;
                 }
-                else
-                { $success = true; }
             }
-        }
-        catch (\Throwable)
+        } catch (\Throwable)
         {
             $success = false;
-        }
-        finally
+        } finally
         {
             restore_error_handler();
         }
-
 
         return $target;
     }
@@ -177,31 +162,27 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Includes file as php file
+     * Includes file as php file.
      *
      * @param array $data data to extract
-     * @param bool $once require_once
-     * @return mixed
+     * @param bool  $once require_once
      */
     public function require(array $data = [], bool $once = false): mixed
     {
-
         try
         {
             return require_file($this->path, $data, $once);
-        }
-        catch (ErrorException)
+        } catch (\ErrorException)
         {
             return null;
+        } finally
+        {
+            restore_error_handler();
         }
-        finally
-        { restore_error_handler(); }
     }
 
     /**
-     * Get file name without extension
-     *
-     * @return string
+     * Get file name without extension.
      */
     public function name(): string
     {
@@ -209,19 +190,15 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Get the last file extension
-     *
-     * @return string
+     * Get the last file extension.
      */
     public function extension(): string
     {
-
         $split = explode('.', $this->path);
 
         if (count($split) > 1)
         {
-
-            if ( ! blank($value = array_pop($split)))
+            if ( ! \blank($value = array_pop($split)))
             {
                 return $value;
             }
@@ -231,11 +208,10 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Get CRC32 Checksum
+     * Get CRC32 Checksum.
      */
     public function hash(): string|null
     {
-
         if ( ! $this->exists())
         {
             return null;
@@ -245,11 +221,7 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Sets access and modification time of file
-     *
-     * @param int|null $mtime
-     * @param int|null $atime
-     * @return bool
+     * Sets access and modification time of file.
      */
     public function touch(?int $mtime = null, ?int $atime = null): bool
     {
@@ -258,7 +230,7 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Loads file as an Iterator
+     * Loads file as an Iterator.
      */
     public function getContents(): FileContents
     {
@@ -266,7 +238,7 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Creates file contents
+     * Creates file contents.
      */
     public function createContents(): FileContents
     {
@@ -274,9 +246,7 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Loads file
-     *
-     * @return string
+     * Loads file.
      */
     public function read(): string
     {
@@ -289,13 +259,14 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Read file as array of lines
+     * Read file as array of lines.
      *
      * @return string[]
      */
     public function readAsArray(): array
     {
         $contents = $this->read();
+
         if (empty($contents))
         {
             return [];
@@ -304,34 +275,30 @@ class File extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Decodes json file
-     *
-     * @return mixed
+     * Decodes json file.
      */
     public function readJson(): mixed
     {
-
-        if (blank($contents = $this->read()))
+        if (\blank($contents = $this->read()))
         {
             return null;
         }
         $result = json_decode($contents, true);
-        if (json_last_error() !== JSON_ERROR_NONE)
+
+        if (JSON_ERROR_NONE !== json_last_error())
         {
-            throw new JsonException(json_last_error_msg());
+            throw new \JsonException(json_last_error_msg());
         }
         return $result;
     }
 
     /**
-     * Save File
+     * Save File.
      *
-     * @param string|string[]|Stringable|Stringable[] $contents
-     * @return bool
+     * @param string|string[]|\Stringable|\Stringable[] $contents
      */
-    public function write(string|array|Stringable $contents): bool
+    public function write(string|array|\Stringable $contents): bool
     {
-
         if ( ! is_array($contents))
         {
             $contents = [$contents];
@@ -341,97 +308,80 @@ class File extends Filesystem implements IteratorAggregate
 
         foreach ($contents as $line)
         {
-            if ( ! blank($filecontents))
-            { $filecontents .= "\n"; }
-
-            if ( ! is_string($line) && $line instanceof \Stringable === false)
+            if ( ! \blank($filecontents))
             {
-                throw new ValueError(sprintf('Cannot save %s, invalid type %s', $this->path, get_debug_type($line)));
+                $filecontents .= "\n";
+            }
+
+            if ( ! is_string($line) && false === $line instanceof \Stringable)
+            {
+                throw new \ValueError(sprintf('Cannot save %s, invalid type %s', $this->path, \get_debug_type($line)));
             }
 
             $filecontents .= (string) $line;
         }
 
-        $path = $this->realpath() ?: $this->path;
+        $path         = $this->realpath() ?: $this->path;
         static::createDir(dirname($path));
 
-        $retry = 0;
+        $retry        = 0;
 
         while ($retry < 3)
         {
-
             try
             {
-                set_default_error_handler();
+                \set_default_error_handler();
 
                 $tmpfile = $this->tmpFile ??= $this->tmpFiles[] = $this->dirname() . DIRECTORY_SEPARATOR . uniqid('', true);
 
-                if (file_put_contents($tmpfile, $filecontents) !== false)
+                if (false !== file_put_contents($tmpfile, $filecontents))
                 {
                     return rename($tmpfile, $path) && $this->chmod(0777);
                 }
-            }
-            catch (Throwable)
+            } catch (\Throwable)
             {
                 $this->tmpFile = null;
-            }
-            finally
+            } finally
             {
                 restore_error_handler();
             }
-            $retry ++;
-            wait();
+            ++$retry;
+            \wait();
         }
-
 
         return false;
     }
 
     /**
-     * Dumps data to json
+     * Dumps data to json.
      */
     public function writeJson(mixed $data, int $flags = JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES): bool
     {
         $contents = json_encode($data, $flags);
 
-        if (json_last_error() !== JSON_ERROR_NONE)
+        if (JSON_ERROR_NONE !== json_last_error())
         {
-            throw new JsonException(json_last_error_msg());
+            throw new \JsonException(json_last_error_msg());
         }
 
-        return $contents !== false && $this->write($contents);
+        return false !== $contents && $this->write($contents);
     }
 
-    public function getIterator(): Traversable
+    public function getIterator(): \Traversable
     {
         yield from $this->getContents();
     }
 
     /**
-     * Locks file access on concurrent requests
+     * Locks file access on concurrent requests.
      */
     public function lock(int|float $seconds = 0, string $owner = ''): FileSystemLock
     {
         return $this->lock ??= new FileSystemLock($this, $seconds, $owner);
     }
 
-    public function __debugInfo(): array
+    protected function doCopy(string|Filesystem $target, bool &$success = null): static
     {
-        $result = [
-            'path' => $this->path,
-        ];
-
-        if ($this->exists())
-        {
-            $result += [
-                'ctime' => date(DATE_DB, $this->ctime()),
-                'mtime' => date(DATE_DB, $this->mtime()),
-                'crc32' => $this->hash(),
-                    //     'locked' => $this->lock()->isAcquired(),
-                    //   'lock' => $this->lock(),
-            ];
-        }
-        return $result;
+        return $this->copy($target, $success);
     }
-
 }

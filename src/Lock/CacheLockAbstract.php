@@ -6,7 +6,6 @@ namespace NGSOFT\Lock;
 
 abstract class CacheLockAbstract extends BaseLockStore
 {
-
     protected const CACHE_KEY_MODIFIER = 'CACHELOCK[%s]';
 
     protected function getCacheKey(): string
@@ -17,7 +16,6 @@ abstract class CacheLockAbstract extends BaseLockStore
 
     protected function createEntry(int|float $until): array
     {
-
         $data = [
             static::KEY_UNTIL => $until,
             static::KEY_OWNER => $this->getOwner(),
@@ -25,5 +23,4 @@ abstract class CacheLockAbstract extends BaseLockStore
 
         return $data;
     }
-
 }

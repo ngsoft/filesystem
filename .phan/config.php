@@ -10,7 +10,7 @@ return [
     // If this is set to null,
     // then Phan assumes the PHP version which is closest to the minor version
     // of the php executable used to execute phan.
-    'target_php_version'                          => null,
+    'target_php_version' => null,
     // A list of directories that should be parsed for class and
     // method information. After excluding the directories
     // defined in exclude_analysis_directory_list, the remaining
@@ -18,11 +18,11 @@ return [
     //
     // Thus, both first-party and third-party code being used by
     // your application should be included in this list.
-    'directory_list'                              => [
+    'directory_list' => [
         'src',
         'vendor',
-        // '../ngsoft-tools/lib/',
-        // '../ngsoft-tools/src/',
+//        '../ngsoft-tools/lib/',
+//        '../ngsoft-tools/src/',
     ],
     // A directory list that defines files that will be excluded
     // from static analysis, but whose class and method
@@ -35,7 +35,7 @@ return [
     //       party code, directories containing that code
     //       should be added to the `directory_list` as
     //       to `exclude_analysis_directory_list`.
-    'exclude_analysis_directory_list'             => [
+    'exclude_analysis_directory_list' => [
         'vendor/',
         '../ngsoft-tools/lib/',
         '../ngsoft-tools/src/',
@@ -45,7 +45,7 @@ return [
     // (Pass these in as relative paths.
     // Base names without extensions such as 'AlwaysReturnPlugin'
     // can be used to refer to a plugin that is bundled with Phan)
-    'plugins'                                     => [
+    'plugins' => [
         // checks if a function, closure or method unconditionally returns.
         // can also be written as 'vendor/phan/phan/.phan/plugins/AlwaysReturnPlugin.php'
         'AlwaysReturnPlugin',
@@ -57,7 +57,7 @@ return [
         'PregRegexCheckerPlugin',
         'PrintfCheckerPlugin',
     ],
-    'suppress_issue_types'                        => [
+    'suppress_issue_types' => [
         'PhanRedefinedUsedTrait',
         'PhanRedefinedExtendedClass',
         'PhanRedefinedClassReference',
@@ -94,5 +94,5 @@ return [
     // compatible with the parent's. This check
     // can add quite a bit of time to the analysis.
     // This will also check if final methods are overridden, etc.
-    'analyze_signature_compatibility'             => true,
+    'analyze_signature_compatibility' => true,
 ];

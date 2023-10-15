@@ -4,94 +4,50 @@ declare(strict_types=1);
 
 namespace NGSOFT\Filesystem;
 
-use FilesystemIterator,
-    InvalidArgumentException,
-    IteratorAggregate,
-    RecursiveDirectoryIterator,
-    RuntimeException,
-    Throwable,
-    Traversable;
-use function blank,
-             mb_strlen,
-             mb_substr;
-use function NGSOFT\Tools\{
-    map, some
-};
-use function preg_valid,
-             set_default_error_handler,
-             str_ends_with,
-             str_starts_with;
+use function NGSOFT\Tools\map;
+use function NGSOFT\Tools\some;
 
 /**
- * Manages a directory
+ * Manages a directory.
  */
-class Directory extends Filesystem implements IteratorAggregate
+class Directory extends Filesystem implements \IteratorAggregate
 {
-
     /** @var Directory[] */
     protected static array $pushd = [];
 
-    /**
-     * Scan files inside directory
-     */
-    protected static function scan(string $dirname, bool $recursive): array
-    {
-
-        static $ignore = ['.', '..'];
-        $result = [];
-
-        if ( ! is_dir($dirname))
+    public function __construct(
+        string $path = ''
+    ) {
+        if (\blank($path))
         {
-            return $result;
+            $path = getcwd();
         }
+        parent::__construct($path);
 
-        foreach (scandir($dirname) as $file)
+        if (is_file($this->path))
         {
-            if (in_array($file, $ignore))
-            {
-                continue;
-            }
-            $absolute = $dirname . DIRECTORY_SEPARATOR . $file;
-
-            if ( ! $recursive || ! is_dir($absolute))
-            {
-                $result[$absolute] = $absolute;
-                continue;
-            }
-
-            if (is_dir($absolute))
-            {
-                $result += static::scan($absolute, $recursive);
-            }
+            throw new \InvalidArgumentException(sprintf('%s is a regular file.', $path));
         }
-
-
-        return $result;
     }
 
     /**
-     * Scan files in a directory
-     * @param string $dirname
-     * @param bool $recursive
-     * @return FileList
+     * Scan files in a directory.
      */
     public static function scanFiles(string $dirname, bool $recursive = false): FileList
     {
-
-
         $dirname = static::getAbsolute($dirname);
 
-        $len = mb_strlen($dirname) + 1;
+        $len     = \mb_strlen($dirname) + 1;
 
         return FileList::create(
-                        map(
-                                function (string $absolute, &$relative) use ($len)
-                                {
-                                    $relative = mb_substr($absolute, $len);
-                                    return $absolute;
-                                },
-                                static::scan($dirname, $recursive)
-                        )
+            map(
+                function (string $absolute, &$relative) use ($len)
+                {
+                    $relative = \mb_substr($absolute, $len);
+                    return $absolute;
+                },
+                static::scan($dirname, $recursive)
+            )
         );
     }
 
@@ -106,7 +62,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Change the current active directory and stores the last position
+     * Change the current active directory and stores the last position.
      */
     public static function pushd(string|self $directory): static|false
     {
@@ -129,7 +85,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Restore the last active directory position and returns it
+     * Restore the last active directory position and returns it.
      */
     public static function popd(): static|false
     {
@@ -141,118 +97,32 @@ class Directory extends Filesystem implements IteratorAggregate
         return false;
     }
 
-    public function __construct(
-            string $path = ''
-    )
-    {
-
-        if (blank($path))
-        {
-            $path = getcwd();
-        }
-        parent::__construct($path);
-
-        if (is_file($this->path))
-        {
-            throw new InvalidArgumentException(sprintf('%s is a regular file.', $path));
-        }
-    }
-
-    protected function copyDir(string $directory, string|self $destination): bool
-    {
-
-        $destination = (string) $destination;
-
-        if ( ! is_dir($directory))
-        {
-            return false;
-        }
-
-        $directory = realpath($directory);
-        $destination = normalize_path($destination);
-
-        if ( ! file_exists($destination))
-        {
-            $this->createDir($destination);
-        }
-        elseif ( ! is_dir($destination))
-        {
-            throw new RuntimeException(sprintf('Cannot copy files to %s, not a directory.', $destination));
-        }
-
-        if (is_dir($destination))
-        {
-            $destination = realpath($destination);
-            if ($destination === $directory)
-            {
-                return false;
-            }
-        }
-        $destination .= DIRECTORY_SEPARATOR;
-
-        /** @var File $file */
-        foreach (static::scanFiles($directory, true) as $relative => $file)
-        {
-
-            $path = $destination . $relative;
-
-            if ($path === $file->realpath())
-            {
-                return false;
-            }
-            try
-            {
-                $file->copy($path, $success);
-                if ($success === false)
-                {
-                    return false;
-                }
-            }
-            catch (Throwable)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /** {@inheritdoc} */
-    protected function doCopy(string|Filesystem $target, bool &$success = null): static
-    {
-        return $this->copy($target, $success);
-    }
-
     /**
-     * Copy Directory to another location
+     * Copy Directory to another location.
      *
-     * @param string|self $target new directory
-     * @param ?bool $success True if the operation succeeded
+     * @param self|string $target  new directory
+     * @param ?bool       $success True if the operation succeeded
+     *
      * @return static a Directory instance for the target
      */
     public function copy(string|self $target, bool &$success = null): static
     {
-
-
-
-        $dest = (string) $target;
-        $target = $target instanceof self ? $target : new static($dest);
+        $dest    = (string) $target;
+        $target  = $target instanceof self ? $target : new static($dest);
         $success = false;
 
         try
         {
-            set_default_error_handler();
+            \set_default_error_handler();
 
             if ($this->exists())
             {
                 $success = $this->copyDir($this->path, $dest);
             }
-        }
-        catch (\Throwable)
+        } catch (\Throwable)
         {
             $success = false;
-        }
-        finally
+        } finally
         {
             restore_error_handler();
         }
@@ -281,8 +151,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Checks if directory exists
-     * @return bool
+     * Checks if directory exists.
      */
     public function exists(): bool
     {
@@ -291,9 +160,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Checks if no files
-     *
-     * @return bool
+     * Checks if no files.
      */
     public function isEmpty(): bool
     {
@@ -301,23 +168,19 @@ class Directory extends Filesystem implements IteratorAggregate
         {
             return true;
         }
+
         try
         {
-            $iterator = new RecursiveDirectoryIterator($this->path, FilesystemIterator::SKIP_DOTS);
-            return iterator_count($iterator) === 0;
-        }
-        catch (\Throwable)
+            $iterator = new \RecursiveDirectoryIterator($this->path, \FilesystemIterator::SKIP_DOTS);
+            return 0 === iterator_count($iterator);
+        } catch (\Throwable)
         {
             return true;
         }
     }
 
     /**
-     * Create dir
-     *
-     * @param int $mode
-     * @param bool $recursive
-     * @return bool
+     * Create dir.
      */
     public function mkdir(int $mode = 0777, bool $recursive = true): bool
     {
@@ -325,7 +188,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Remove dir
+     * Remove dir.
      */
     public function rmdir(): bool
     {
@@ -343,7 +206,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Change dir
+     * Change dir.
      */
     public function chdir(): bool
     {
@@ -356,51 +219,15 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Checks if is current active dir
+     * Checks if is current active dir.
      */
     public function isCurrentWorkingDir(): bool
     {
         return getcwd() === $this->realpath();
     }
 
-    protected function filesIterator(FileList $list, string|array $extensions = [], bool $hidden = false): FileList
-    {
-
-        if ( ! is_array($extensions))
-        {
-            $extensions = empty($extensions) ? [] : [$extensions];
-        }
-
-        $extensions = map(fn($e) => ! str_starts_with($e, '.') ? ".$e" : $e, $extensions);
-
-        return $list->filter(
-                        function (Filesystem $filesystem, string $file) use ($extensions, $hidden)
-                        {
-                            if ( ! $filesystem instanceof File)
-                            {
-                                return false;
-                            }
-
-                            if (
-                                    ! blank($extensions) &&
-                                    ! some(function ($ext) use ($file)
-                                    { return str_ends_with($file, $ext); }, $extensions)
-                            )
-                            {
-                                return false;
-                            }
-                            if ( ! $hidden && $filesystem->hidden())
-                            {
-                                return false;
-                            }
-
-                            return true;
-                        }
-        );
-    }
-
     /**
-     * Search for a file recursively using regex, glob or check if filename contains $query
+     * Search for a file recursively using regex, glob or check if filename contains $query.
      */
     public function search(string $pattern): FileList
     {
@@ -408,23 +235,21 @@ class Directory extends Filesystem implements IteratorAggregate
         {
             try
             {
-                set_default_error_handler();
+                \set_default_error_handler();
 
-                if (preg_valid($pattern))
+                if (\preg_valid($pattern))
                 {
-                    return static::scanFiles($this->path, true)->filter(fn(Filesystem $path) => $path->matches($pattern));
+                    return static::scanFiles($this->path, true)->filter(fn (Filesystem $path) => $path->matches($pattern));
                 }
-                elseif (false !== strpbrk($pattern, '*?[]'))
+
+                if (false !== strpbrk($pattern, '*?[]'))
                 {
                     return $this->glob($pattern);
                 }
-                return static::scanFiles($this->path, true)->filter(fn(Filesystem $path) => $path->contains($pattern));
-            }
-            catch (\Throwable)
+                return static::scanFiles($this->path, true)->filter(fn (Filesystem $path) => $path->contains($pattern));
+            } catch (\Throwable)
             {
-
-            }
-            finally
+            } finally
             {
                 restore_error_handler();
             }
@@ -433,21 +258,22 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Executes a glob search inside the directory
+     * Executes a glob search inside the directory.
      */
     public function glob(string $pattern, int $flags = 0): FileList
     {
-
         $current = getcwd();
+
         try
         {
-            set_default_error_handler();
+            \set_default_error_handler();
             $list = new FileList();
 
             if ($this->chdir())
             {
                 $result = glob($pattern, $flags);
-                if ($result === false)
+
+                if (false === $result)
                 {
                     return $list;
                 }
@@ -455,8 +281,7 @@ class Directory extends Filesystem implements IteratorAggregate
             }
 
             return $list;
-        }
-        finally
+        } finally
         {
             restore_error_handler();
             chdir($current);
@@ -464,11 +289,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * List files inside directory
-     *
-     * @param string|array $extensions
-     * @param bool $hidden
-     * @return FileList
+     * List files inside directory.
      */
     public function files(string|array $extensions = [], bool $hidden = false): FileList
     {
@@ -476,10 +297,7 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * List files recursively
-     * @param string|array $extensions
-     * @param bool $hidden
-     * @return FileList
+     * List files recursively.
      */
     public function allFiles(string|array $extensions = [], bool $hidden = false): FileList
     {
@@ -487,13 +305,10 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * List directories
-     *
-     * @return FileList
+     * List directories.
      */
     public function directories(bool $recursive = false): FileList
     {
-
         $list = static::scanFiles($this->path);
 
         if ($recursive)
@@ -502,16 +317,17 @@ class Directory extends Filesystem implements IteratorAggregate
 
             foreach ($list as $dir)
             {
-
                 if ($dir instanceof Directory)
                 {
                     $sub = $dir->directories(true);
+
                     if (count($sub) > 0)
                     {
                         $result->append($sub);
+                    } else
+                    {
+                        $result->append($dir);
                     }
-                    else
-                    { $result->append($dir); }
                 }
             }
 
@@ -521,15 +337,12 @@ class Directory extends Filesystem implements IteratorAggregate
     }
 
     /**
-     * Access a file in that directory
-     *
-     * @param string $target
-     * @return File|Directory
+     * Access a file in that directory.
      */
     public function getFile(string $target): File|Directory
     {
-
         $path = normalize_path($this->path . DIRECTORY_SEPARATOR . $target);
+
         if (is_dir($path))
         {
             return static::create($path);
@@ -537,9 +350,142 @@ class Directory extends Filesystem implements IteratorAggregate
         return File::create($path);
     }
 
-    public function getIterator(): Traversable
+    public function getIterator(): \Traversable
     {
         yield from static::scanFiles($this->path);
     }
 
+    /**
+     * Scan files inside directory.
+     */
+    protected static function scan(string $dirname, bool $recursive): array
+    {
+        static $ignore = ['.', '..'];
+        $result        = [];
+
+        if ( ! is_dir($dirname))
+        {
+            return $result;
+        }
+
+        foreach (scandir($dirname) as $file)
+        {
+            if (in_array($file, $ignore))
+            {
+                continue;
+            }
+            $absolute = $dirname . DIRECTORY_SEPARATOR . $file;
+
+            if ( ! $recursive || ! is_dir($absolute))
+            {
+                $result[$absolute] = $absolute;
+                continue;
+            }
+
+            if (is_dir($absolute))
+            {
+                $result += static::scan($absolute, $recursive);
+            }
+        }
+
+        return $result;
+    }
+
+    protected function copyDir(string $directory, string|self $destination): bool
+    {
+        $destination = (string) $destination;
+
+        if ( ! is_dir($directory))
+        {
+            return false;
+        }
+
+        $directory   = realpath($directory);
+        $destination = normalize_path($destination);
+
+        if ( ! file_exists($destination))
+        {
+            $this->createDir($destination);
+        } elseif ( ! is_dir($destination))
+        {
+            throw new \RuntimeException(sprintf('Cannot copy files to %s, not a directory.', $destination));
+        }
+
+        if (is_dir($destination))
+        {
+            $destination = realpath($destination);
+
+            if ($destination === $directory)
+            {
+                return false;
+            }
+        }
+        $destination .= DIRECTORY_SEPARATOR;
+
+        /** @var File $file */
+        foreach (static::scanFiles($directory, true) as $relative => $file)
+        {
+            $path = $destination . $relative;
+
+            if ($path === $file->realpath())
+            {
+                return false;
+            }
+
+            try
+            {
+                $file->copy($path, $success);
+
+                if (false === $success)
+                {
+                    return false;
+                }
+            } catch (\Throwable)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function doCopy(string|Filesystem $target, bool &$success = null): static
+    {
+        return $this->copy($target, $success);
+    }
+
+    protected function filesIterator(FileList $list, string|array $extensions = [], bool $hidden = false): FileList
+    {
+        if ( ! is_array($extensions))
+        {
+            $extensions = empty($extensions) ? [] : [$extensions];
+        }
+
+        $extensions = map(fn ($e) => ! \str_starts_with($e, '.') ? ".{$e}" : $e, $extensions);
+
+        return $list->filter(
+            function (Filesystem $filesystem, string $file) use ($extensions, $hidden)
+            {
+                if ( ! $filesystem instanceof File)
+                {
+                    return false;
+                }
+
+                if (
+                    ! \blank($extensions)
+                    && ! some(function ($ext) use ($file)
+                    { return \str_ends_with($file, $ext); }, $extensions)
+                ) {
+                    return false;
+                }
+
+                if ( ! $hidden && $filesystem->hidden())
+                {
+                    return false;
+                }
+
+                return true;
+            }
+        );
+    }
 }

@@ -6,5 +6,4 @@ namespace NGSOFT\Lock;
 
 class LockTimeout extends \RuntimeException
 {
-
 }

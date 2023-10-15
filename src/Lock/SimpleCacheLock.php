@@ -4,32 +4,36 @@ declare(strict_types=1);
 
 namespace NGSOFT\Lock;
 
-use Psr\SimpleCache\CacheInterface,
-    RuntimeException,
-    Stringable;
+use Psr\SimpleCache\CacheInterface;
 
-if ( ! interface_exists(CacheInterface::class)) {
-    throw new RuntimeException('psr/simple-cache not installed, please install a PSR-16 cache');
+if ( ! interface_exists(CacheInterface::class))
+{
+    throw new \RuntimeException('psr/simple-cache not installed, please install a PSR-16 cache');
 }
 
 /**
- * Use SimpleCache to manage your locks
+ * Use SimpleCache to manage your locks.
  */
 class SimpleCacheLock extends CacheLockAbstract
 {
-
     public function __construct(
-            protected CacheInterface $cache,
-            string|Stringable $name,
-            protected int|float $seconds = 0,
-            string|Stringable $owner = '',
-            protected bool $autoRelease = true
-    )
-    {
+        protected CacheInterface $cache,
+        string|\Stringable $name,
+        protected int|float $seconds = 0,
+        string|\Stringable $owner = '',
+        protected bool $autoRelease = true
+    ) {
         parent::__construct($name, $seconds, $owner, $autoRelease);
     }
 
-    /** {@inheritdoc} */
+    public function forceRelease(): void
+    {
+        if ($this->cache->delete($this->getCacheKey()))
+        {
+            $this->until = 1;
+        }
+    }
+
     protected function read(): array|false
     {
         $result = $this->cache->get($this->getCacheKey());
@@ -38,20 +42,10 @@ class SimpleCacheLock extends CacheLockAbstract
 
     protected function write(int|float $until): bool
     {
-
         return $this->cache->set(
-                        $this->getCacheKey(),
-                        $this->createEntry($until),
-                        (int) ceil($until - $this->timestamp())
+            $this->getCacheKey(),
+            $this->createEntry($until),
+            (int) ceil($until - $this->timestamp())
         );
     }
-
-    /** {@inheritdoc} */
-    public function forceRelease(): void
-    {
-        if ($this->cache->delete($this->getCacheKey())) {
-            $this->until = 1;
-        }
-    }
-
 }

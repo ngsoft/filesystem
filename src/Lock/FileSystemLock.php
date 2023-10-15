@@ -4,61 +4,32 @@ declare(strict_types=1);
 
 namespace NGSOFT\Lock;
 
-use NGSOFT\Filesystem\File,
-    Stringable;
-use function set_default_error_handler;
+use NGSOFT\Filesystem\File;
 
 /**
- * Creates a lock file with the same filename and directory as provided file
+ * Creates a lock file with the same filename and directory as provided file.
  */
 class FileSystemLock extends BaseLockStore
 {
-
     protected File $file;
 
     public function __construct(
-            File $name,
-            protected int|float $seconds = 0,
-            string|Stringable $owner = '',
-            protected bool $autoRelease = true
-    )
-    {
+        File $name,
+        protected int|float $seconds = 0,
+        string|\Stringable $owner = '',
+        protected bool $autoRelease = true
+    ) {
         parent::__construct($name, $seconds, $owner, $autoRelease);
 
-        if ($name->extension() === 'lock')
+        if ('lock' === $name->extension())
         {
             $locked = $name->getPath();
+        } else
+        {
+            $locked = $name->dirname() . DIRECTORY_SEPARATOR . $name->name() . '.lock';
         }
-        else
-        { $locked = $name->dirname() . DIRECTORY_SEPARATOR . $name->name() . '.lock'; }
 
         $this->file = new File($locked);
-    }
-
-    protected function read(): array|false
-    {
-        $data = $this->file->require();
-        return is_array($data) ? $data : false;
-    }
-
-    protected function write(int|float $until): bool
-    {
-
-        $contents = sprintf(
-                "<?php\nreturn [%u => %f, %u => %s];",
-                static::KEY_UNTIL, $until,
-                static::KEY_OWNER, var_export($this->getOwner(), true),
-        );
-
-        try
-        {
-            set_default_error_handler();
-            return $this->file->write($contents);
-        }
-        finally
-        {
-            restore_error_handler();
-        }
     }
 
     public function forceRelease(): void
@@ -69,4 +40,29 @@ class FileSystemLock extends BaseLockStore
         }
     }
 
+    protected function read(): array|false
+    {
+        $data = $this->file->require();
+        return is_array($data) ? $data : false;
+    }
+
+    protected function write(int|float $until): bool
+    {
+        $contents = sprintf(
+            "<?php\nreturn [%u => %f, %u => %s];",
+            static::KEY_UNTIL,
+            $until,
+            static::KEY_OWNER,
+            var_export($this->getOwner(), true),
+        );
+
+        try
+        {
+            \set_default_error_handler();
+            return $this->file->write($contents);
+        } finally
+        {
+            restore_error_handler();
+        }
+    }
 }
