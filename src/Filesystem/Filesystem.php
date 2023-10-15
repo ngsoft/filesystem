@@ -12,6 +12,8 @@ abstract class Filesystem implements \Countable, \Stringable
 {
     use ClassUtils;
 
+    public const VERSION = '1.0.0';
+
     protected ?\SplFileInfo $info;
     protected string $path;
 
