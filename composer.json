@@ -20,7 +20,11 @@
     ],
     "suggest": {},
     "provide": {},
-    "require-dev": {},
+    "require-dev": {
+        "fig/cache-util": "^2",
+        "psr/cache": "^1|^2|^3",
+        "psr/simple-cache": "^1|^2|^3"
+    },
     "require": {
         "php": ">=8.1"
     },
